@@ -33,20 +33,43 @@ def main():
         print(f'Parsing took {d.seconds}s {d.microseconds // 1000}ms')
 
     if args.print:
-        def p(el, indent: str = ''):
-            print(indent, el)
-            for e in dir(el):
-                if '_' not in e:
-                    child = getattr(el, e)
-                    if not isinstance(child, (str, int, float)):
-                        if isinstance(child, (list, tuple)):
-                            print(indent, len(child), 'children:')
-                            for s in child:
-                                p(s, indent + '  ')
-                        else:
-                            p(child, indent + '  ')
+        indent = 3
 
-        p(ast)
+        def dump(el, level: int = 0):
+            print('{}{:{len}s}'.format(level * (' ' * indent), el.__repr__(), len=80 - level * indent), end='')
+
+            # No children
+            if not list(filter(lambda x: x[0] != '_', dir(el))):
+                print()
+                return
+
+            first_child = True
+            for child in dir(el):
+                if '_' == child[0]:
+                    continue
+
+                child_el = getattr(el, child)
+
+                if isinstance(child_el, (str, int, float)) or child_el is None:
+                    print('{:20s}{}'.format(child, child_el))
+
+                elif isinstance(child_el, (list, tuple)):
+                    if first_child:
+                        print()
+                    for sub in child_el:
+                        dump(sub, level + 1)
+
+                else:
+                    if first_child:
+                        print()
+                    dump(child_el, level + 1)
+
+                first_child = False
+
+        try:
+            dump(ast)
+        except Exception as e:
+            print(e)
 
     if args.export:
         pickle.dump(ast, open(args.file.name + '.ast', 'wb+'))

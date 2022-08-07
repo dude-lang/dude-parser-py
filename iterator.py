@@ -3,7 +3,6 @@ class Iterator:
         self._pos = 0
         self._max = len(iterable) - 1
         self._list = iterable
-        self._cur = iterable[0]
 
     def __iter__(self):
         return iter(self._list)
@@ -31,6 +30,9 @@ class Iterator:
     def tail(self):
         return self._list[self._pos:]
 
+    def slice(self, elements: int = 3):
+        return self._list[self._pos - elements:self._pos + elements]
+
     def get(self):
         return self._list[self._pos]
 
@@ -46,12 +48,10 @@ class Iterator:
         if not self:
             raise StopIteration
 
-        self._cur = self.get()
         return self.get()
 
     def prev(self):
         self._pos -= 1
-        self._cur = self.get()
         return self.get()
 
     def seek(self, pos: int):
@@ -59,5 +59,3 @@ class Iterator:
 
         if not self:
             raise StopIteration
-
-        self._cur = self.get()
