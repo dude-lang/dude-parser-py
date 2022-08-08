@@ -68,8 +68,8 @@ class LT(SYM):
 
 
 class KW(SYM):
-    SYM = END, FUN, IF, ELIF, ELSE, NOP, RET, FOR, WHILE, DAT, TRUE, FALSE, NULL = \
-        'end', 'fun', 'if', 'elif', 'else', 'nop', 'ret', 'for', 'while', 'dat', 'true', 'false', 'null'
+    SYM = END, FUN, IF, ELIF, ELSE, NOP, RET, FOR, IN, WHILE, DAT, TRUE, FALSE, NULL = \
+        'end', 'fun', 'if', 'elif', 'else', 'nop', 'ret', 'for', 'in', 'while', 'dat', 'true', 'false', 'null'
 
 
 class OP(SYM):
@@ -78,7 +78,7 @@ class OP(SYM):
 
 
 class CT(SYM):
-    SYM = COL, PAR_OP, PAR_CL, SQB_OP, SQB_CL = ',', '(', ')', '[', ']'
+    SYM = COL, COM, PAR_OP, PAR_CL, SQB_OP, SQB_CL = ':', ',', '(', ')', '[', ']'
 
 
 LTs = LT()
@@ -95,6 +95,8 @@ def parse_expression(it: Iterator, ctx: Context):
         expression = Number(tk)
     elif tk in [KW.TRUE, KW.FALSE]:
         expression = Boolean(tk)
+    elif tk == KW.NULL:
+        expression = Null()
     elif tk in LTs:
         expression = parse_literal(it, ctx)
     elif tk in CTs:
@@ -106,13 +108,54 @@ def parse_expression(it: Iterator, ctx: Context):
             if it.next() != CT.PAR_CL:
                 raise InvalidToken(it, CT.PAR_CL)
 
-        # Sequence expression TODO: not implemented
+        # Sequence expression
         elif tk == CT.SQB_OP:
             it.next()
-            expression = EmptyExpression()
 
-            if it.get() != CT.SQB_CL:
-                raise InvalidToken(it, CT.SQB_CL)
+            start = parse_expression(it, ctx)
+
+            tk = it.next()
+
+            # List
+            if tk == CT.COM:
+                tk = it.next()
+
+                elements = [start]
+                while tk != CT.SQB_CL:
+                    if tk == CT.COM:
+                        pass
+                    else:
+                        elements.append(parse_expression(it, ctx))
+                    tk = it.next()
+
+                return List(elements)
+
+            # Slice
+            elif tk == CT.COL:
+                it.next()
+
+                stop = parse_expression(it, ctx)
+
+                tk = it.next()
+
+                if tk == CT.SQB_CL:
+                    return Sequence(start, stop, EmptyExpression())
+                elif tk != CT.COL:
+                    raise InvalidToken(it, CT.COL)
+
+                it.next()
+
+                step = parse_expression(it, ctx)
+
+                expression = Sequence(start, stop, step)
+
+                if it.next() != CT.SQB_CL:
+                    raise InvalidToken(it, CT.SQB_CL)
+
+                return expression
+
+            else:
+                raise InvalidToken(it, (CT.COM, CT.COL))
 
         else:
             raise InvalidToken(it, CT.PAR_CL)
@@ -122,10 +165,8 @@ def parse_expression(it: Iterator, ctx: Context):
         raise InvalidToken(it, '...')
 
     pk = it.peek()
-    print('###', tk, pk)
     if pk in OPs:
-        tk = it.next()
-        op = Operator(tk)
+        op = Operator(it.next())
 
         it.next()
 
@@ -200,9 +241,7 @@ def parse_function_statement(it: Iterator, ctx: Context):
     if is_identifier(tk):
         name = Identifier(tk)
 
-    tk = it.next()
-
-    if tk != CT.PAR_OP:
+    if it.next() != CT.PAR_OP:
         raise InvalidToken(it, CT.PAR_OP)
 
     tk = it.next()
@@ -212,10 +251,10 @@ def parse_function_statement(it: Iterator, ctx: Context):
     while tk != CT.PAR_CL:
         if is_identifier(tk):
             params.append(Identifier(tk))
-        elif tk == CT.COL:
+        elif tk == CT.COM:
             pass
         else:
-            raise InvalidToken(it, (CT.COL, 'id'))
+            raise InvalidToken(it, (CT.COM, 'id'))
 
         tk = it.next()
 
@@ -246,15 +285,46 @@ def parse_while_loop_statement(it: Iterator, ctx: Context):
     it.next()
     
     condition = parse_expression(it, ctx)
-    
+
     tk = it.next()
-    
+
     body = []
     while tk != KW.END:
         body.append(parse_statement(it, ctx))
         tk = it.next()
     
     return WhileLoopStatement(condition, body)
+
+
+@debug
+def parse_for_loop_statement(it: Iterator, ctx: Context):
+    tk = it.get()
+
+    if tk != KW.FOR:
+        raise InvalidToken(it, KW.FOR)
+
+    tk = it.next()
+
+    if not is_identifier(tk):
+        raise InvalidToken(it, 'identifier')
+
+    index = Identifier(tk)
+
+    if it.next() != KW.IN:
+        raise InvalidToken(it, KW.IN)
+
+    it.next()
+
+    sequence = parse_expression(it, ctx)
+
+    tk = it.next()
+
+    body = []
+    while tk != KW.END:
+        body.append(parse_statement(it, ctx))
+        tk = it.next()
+
+    return ForLoopStatement(index, sequence, body)
     
 
 @debug
@@ -264,15 +334,13 @@ def parse_structure_statement(it: Iterator, ctx: Context):
     if tk != KW.DAT:
         raise InvalidToken(it, KW.DAT)
 
-    tk = it.next()
-
-    name = Identifier(tk)
+    name = Identifier(it.next())
 
     tk = it.next()
 
     members = []
     while tk != KW.END:
-        if tk != CT.COL:
+        if tk != CT.COM:
             members.append(Identifier(tk))
         tk = it.next()
 
@@ -343,9 +411,7 @@ def parse_assignment_statement(it: Iterator, ctx: Context):
         raise InvalidToken(it, 'id')
     var = Identifier(tk)
 
-    tk = it.next()
-
-    if tk != OP.EQ:
+    if it.next() != OP.EQ:
         raise InvalidToken(it, OP.EQ)
 
     it.next()
@@ -367,6 +433,8 @@ def parse_statement(it: Iterator, ctx: Context):
         return parse_conditional_statement(it, ctx)
     elif tk == KW.WHILE:
         return parse_while_loop_statement(it, ctx)
+    elif tk == KW.FOR:
+        return parse_for_loop_statement(it, ctx)
     elif tk == KW.DAT:
         return parse_structure_statement(it, ctx)
     elif is_identifier(tk):

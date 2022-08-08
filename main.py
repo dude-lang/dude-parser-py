@@ -57,6 +57,7 @@ def main():
                     if first_child:
                         print()
                     for sub in child_el:
+                        # print('{}{}'.format((level + 1) * (' ' * indent), child), end='')
                         dump(sub, level + 1)
 
                 else:
