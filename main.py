@@ -25,7 +25,7 @@ def main():
     args = parser.parse_args()
 
     t1 = datetime.now()
-    ast = parse(args.file.read())
+    ast, ctx = parse(args.file.read())
     t2 = datetime.now()
 
     if args.time:
@@ -73,7 +73,7 @@ def main():
             print(e)
 
     if args.export:
-        pickle.dump(ast, open(args.file.name + '.ast', 'wb+'))
+        pickle.dump((ast, ctx), open(args.file.name + '.ast', 'wb+'))
 
 
 if __name__ == '__main__':

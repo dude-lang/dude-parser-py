@@ -264,10 +264,12 @@ def parse_function_statement(it: Iterator, ctx: Context):
     tk = it.next()
 
     # Optional function body
+    ctx.level += 1
     body = []
     while tk != KW.END:
         body.append(parse_statement(it, ctx))
         tk = it.next()
+    ctx.level -= 1
 
     if tk != KW.END:
         raise InvalidToken(it, KW.END)
@@ -288,10 +290,12 @@ def parse_while_loop_statement(it: Iterator, ctx: Context):
 
     tk = it.next()
 
+    ctx.level += 1
     body = []
     while tk != KW.END:
         body.append(parse_statement(it, ctx))
         tk = it.next()
+    ctx.level -= 1
     
     return WhileLoopStatement(condition, body)
 
@@ -319,10 +323,12 @@ def parse_for_loop_statement(it: Iterator, ctx: Context):
 
     tk = it.next()
 
+    ctx.level += 1
     body = []
     while tk != KW.END:
         body.append(parse_statement(it, ctx))
         tk = it.next()
+    ctx.level -= 1
 
     return ForLoopStatement(index, sequence, body)
     
@@ -338,11 +344,13 @@ def parse_structure_statement(it: Iterator, ctx: Context):
 
     tk = it.next()
 
+    ctx.level += 1
     members = []
     while tk != KW.END:
         if tk != CT.COM:
             members.append(Identifier(tk))
         tk = it.next()
+    ctx.level -= 1
 
     return StructureStatement(name, members)
 
@@ -444,7 +452,7 @@ def parse_statement(it: Iterator, ctx: Context):
 
 
 @debug
-def parse(program: str) -> Program:
+def parse(program: str) -> (Program, Context):
     ast = Program()
     ctx = Context()
 
@@ -468,4 +476,4 @@ def parse(program: str) -> Program:
         print('EX: ', e)
         print(traceback.format_exc())
 
-    return ast
+    return ast, ctx
