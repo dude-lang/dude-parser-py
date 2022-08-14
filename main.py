@@ -1,11 +1,7 @@
-import os
-import sys
+import pickle
 from argparse import ArgumentParser, FileType
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import pickle
-
-sys.path.append(str(os.path.dirname(__file__) + '\\..'))
 
 from dude_parser import parse
 

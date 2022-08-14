@@ -16,30 +16,6 @@ def debug(func):
     return wrapper
 
 
-# class Peek:
-#     def __init__(self, it: Iterator):
-#         self._it = it
-#         self._pos = it.pos()
-#
-#     def __enter__(self):
-#         pass
-#
-#     def __exit__(self, exc_type, exc_val, exc_tb):
-#         if exc_type == InvalidToken:
-#             self._it.seek(self._pos)
-
-
-# def peek(func):
-#     def wrapper(it: Iterator, ctx: Context):
-#         pos = it.pos()
-#         try:
-#             func(it, ctx)
-#         except Reset:
-#             it.seek(pos)
-#
-#     return wrapper
-
-
 class InvalidToken(BaseException):
     def __init__(self, it: Iterator, expected):
         pos = sum(map(len, it.front()))
